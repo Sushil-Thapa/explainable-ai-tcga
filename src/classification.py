@@ -1,0 +1,35 @@
+# coding: utf-8
+
+import os,sys
+
+import pandas as pd
+import numpy as np
+
+
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+import random
+
+from src.data import get_data
+from src.models import get_model
+from src.train.trainer import train
+from src.train.test import predict
+from src.explainer import explain
+
+#### Model Definition
+
+data = get_data(load_existing=True)
+(X_train, X_test, y_train, y_test, feature_names, label_encoder) = data
+
+
+input_dim, output_dim = X_train.shape[1], y_train.shape[1]
+print("input_dim, output_dim:", input_dim, output_dim)
+model = get_model(input_dim, output_dim)
+
+# import pdb; pdb.set_trace()
+model = train(model, data, load_existing = False)
+
+# # predict(model, label_encoder, data)
+
+# explain(model, data)
