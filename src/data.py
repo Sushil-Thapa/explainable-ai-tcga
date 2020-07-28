@@ -23,7 +23,7 @@ import pickle
 
 def get_data(load_existing=True):
     
-    filename = "data/scaled_splitted_data.npz"
+    filename = "data/scaled_splitted_data.pickle"
     data_path = "../../data/exT.csv"
 
     if load_existing == False:
@@ -79,18 +79,31 @@ def get_data(load_existing=True):
             print("File Exists...")
             return 
 
-        np.savez_compressed(filename, X_train=X_train, X_test=X_test, 
-                            y_train=y_train, y_test=y_test,
-                            feature_names=df.columns,
-                            label_encoder=label_encoder,
-                        )
+        # np.savez_compressed(filename, X_train=X_train, X_test=X_test, 
+        #                     y_train=y_train, y_test=y_test,
+        #                     feature_names=df.columns,
+        #                     label_encoder=label_encoder,
+        #                 )
+
+        temp = {
+            "X_train":X_train, "X_test":X_test, 
+            "y_train":y_train, "y_test":y_test,
+            "feature_names":df.columns,
+            "label_encoder":label_encoder
+        }
+
+        with open(filename, 'wb') as f:
+            pickle.dump(temp, f)
+
         print(f"{filename} data saved..")
 
     else:
         # Load the splitted variables for next step.
         # Just Run this below to load them and start experimentation later.
 
-        a = np.load(filename)
+        # a = np.load(filename)
+        with open(filename, 'rb') as f:
+            a = pickle.load(f)
 
         X_train, X_test, y_train, y_test = a["X_train"], a["X_test"], a["y_train"], a["y_test"]
         feature_names, label_encoder = a["feature_names"], a["label_encoder"]

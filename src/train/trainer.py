@@ -1,8 +1,9 @@
 import os 
 import glob
 import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
 
-print("GPU Tests:", tf.config.list_physical_devices('GPU'), tf.test.is_built_with_gpu_support(), tf.test.is_built_with_cuda())
+print("GPU Test:", tf.config.list_physical_devices('GPU'), tf.test.is_built_with_gpu_support(), tf.test.is_built_with_cuda())
 
 
 def train(model, data, load_existing = True):
@@ -36,7 +37,12 @@ def train(model, data, load_existing = True):
 
         tb_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
 
-        model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=['categorical_crossentropy','accuracy'])
+
+        optimizer = Adam(
+            lr = 0.001,
+            name = "Adam"
+        )
+        model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=['categorical_crossentropy','accuracy'])
 
         history = model.fit(X_train, y_train, 
                             validation_data=(X_test, y_test), 
