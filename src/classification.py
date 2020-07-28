@@ -27,9 +27,8 @@ input_dim, output_dim = X_train.shape[1], y_train.shape[1]
 print("input_dim, output_dim:", input_dim, output_dim)
 model = get_model(input_dim, output_dim)
 
-# import pdb; pdb.set_trace()
 model = train(model, data, load_existing = True)
 
 # predict(model, label_encoder, data)
 
-explain(model, data)
+explain(model, data, n_samples=1)

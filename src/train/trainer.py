@@ -7,6 +7,7 @@ print("GPU Test:", tf.config.list_physical_devices('GPU'), tf.test.is_built_with
 
 
 def train(model, data, load_existing = True):
+    print("Starting trainer module...")
     checkpoint_path = "out/cp.ckpt"
 
 
@@ -35,13 +36,14 @@ def train(model, data, load_existing = True):
         log_dir = f'{log_dir}/{exp_log_dir}'
         print(f"Saving models into: {log_dir}")
 
-        tb_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
+        tb_callback = tf.keras.callbacks.TensorBoard(log_dir= 3)
 
 
         optimizer = Adam(
             lr = 0.001,
             name = "Adam"
         )
+
         model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=['categorical_crossentropy','accuracy'])
 
         history = model.fit(X_train, y_train, 
