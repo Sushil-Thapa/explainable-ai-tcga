@@ -20,11 +20,21 @@ import pickle
 # with open('filename.pickle', 'rb') as handle:
 #     b = pickle.load(handle)
 
-
-def get_data(load_existing=True):
+def get_data(load_existing=True, fpkm=False):
     
     filename = "data/scaled_splitted_data.pickle"
     data_path = "../../data/exT.csv"
+
+    if fpkm == True:
+        filename = "data/fpkm_scaled_splitted_data.pickle"
+        data_path = "../../data/exT.csv"
+        fpkm_path = "../../data/FPKM_gene_counts_FPKM.csv"
+
+        print(f"Loading dataset:{fpkm_path}")
+
+        fpkm_df = pd.read_csv(fpkm_path)
+        print(f"Loaded dataset with shape:{fpkm_df.shape}")
+
 
     if load_existing == False:
         # ### IMPORTANT

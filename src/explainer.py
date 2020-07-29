@@ -7,8 +7,8 @@ import time
 
 def explain(model, data, n_samples=1, submodular_pick= False):
     print("Starting Explainer module...")
-    num_features = 10
-    top_labels = 3
+    num_features = 10  # maximum number of features present in the explainations
+    top_labels = 1  # number of max probable classes to consider
 
     (X_train, X_test, y_train, y_test, feature_names, label_encoder) = data
 
@@ -51,9 +51,9 @@ def explain(model, data, n_samples=1, submodular_pick= False):
             print("Iteration complete, Elapsed time:", time.time() - start)
 
     else:
-        print("Preparing submodular engines...")
-        num_exps_desired = 5
-        sample_size = 10
+        print("Preparing submodular-pick engines...")
+        num_exps_desired = 5  # number of exp objects returned.
+        sample_size = 5 # number of instances to explain 
 
         import warnings
         import pandas as pd
@@ -61,7 +61,7 @@ def explain(model, data, n_samples=1, submodular_pick= False):
         from lime import submodular_pick
 
         start = time.time()
-        sp_obj = submodular_pick.SubmodularPick(explainer, X_train, model.predict_proba, sample_size = sample_size, num_features=num_features,num_exps_desired=num_exps_desired)
+        sp_obj = submodular_pick.SubmodularPick(explainer, X_train, model.predict_proba, top_labels = top_labels, sample_size = sample_size, num_features=num_features,num_exps_desired=num_exps_desired)
         print("Submodular pick complete. Elapsed time:", time.time() - start)
 
         df=pd.DataFrame({})
@@ -69,15 +69,24 @@ def explain(model, data, n_samples=1, submodular_pick= False):
             start = time.time()
             dfl=[]
             for i,exp in enumerate(sp_obj.sp_explanations):
-                l=exp.as_list(label=this_label)  # this label should be for looped or for ranged.
+                print("R2 Score:",exp.score) # 0-1 worse-better
+                
+                exp_avilable_labels = exp.available_labels()
+
+                #TODO save html
+                html_out = f"out/lime/sp/{i}.html"
+                print("Saving explainations to file",html_out)
+                exp.save_to_file(html_out)
+
+                l=exp.as_list(label=exp_avilable_labels[this_label])  # for looped instead of for looped(in tutorial) as not all are in available labels
                 l.append(("exp number",i))
                 dfl.append(dict(l))
             # dftest=pd.DataFrame(dfl)
-            df=df.append(pd.DataFrame(dfl,index=[label_encoder.classes_[this_label] for i in range(len(sp_obj.sp_explanations))]))
+            df=df.append(pd.DataFrame(dfl,index=[label_encoder.classes_[exp_avilable_labels[this_label]] for i in range(len(sp_obj.sp_explanations))]))
             print(df)
             print("Iteration complete, Elapsed time:", time.time() - start)
 
-        df.to_csv("out/lime/sp_out.csv")
+        df.to_csv("out/lime/sp/sp_out_5.csv")
 
 
 
