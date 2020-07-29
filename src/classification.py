@@ -31,4 +31,4 @@ model = train(model, data, load_existing = True)
 
 # predict(model, label_encoder, data)
 
-explain(model, data, n_samples=1)
+explain(model, data, n_samples=1, submodular_pick= True)
