@@ -5,7 +5,7 @@ import time
 
 # we compute statistics on each feature (column). If the feature is numerical, we compute the mean and std, and discretize it into quartiles
 
-def explain(model, data, n_samples=1, submodular_pick= False):
+def explain(model, data, n_samples=3, submodular_pick= False):
     print("Starting Explainer module...")
     num_features = 10  # maximum number of features present in the explainations
     top_labels = 1  # number of max probable classes to consider
@@ -21,7 +21,7 @@ def explain(model, data, n_samples=1, submodular_pick= False):
 
 
     if submodular_pick == False:
-        for _ in range(n_samples):
+        for n in range(n_samples):
             start = time.time()
             print("Starting explaining the instance...")
             ith = np.random.randint(0, X_test.shape[0])
@@ -38,7 +38,7 @@ def explain(model, data, n_samples=1, submodular_pick= False):
             exp_avilable_labels = exp.available_labels()
             print("Number of labels to analyze",len(exp_avilable_labels))
 
-            html_out = f"out/lime/{ith}.html"
+            html_out = f"out/lime/{n}_{ith}.html"
             print("Saving explainations to file",html_out)
             exp.save_to_file(html_out)
             print("Error R2 Score:",exp.score) # 0-1 worse-better
@@ -74,7 +74,7 @@ def explain(model, data, n_samples=1, submodular_pick= False):
                 exp_avilable_labels = exp.available_labels()
 
                 #TODO save html
-                html_out = f"out/lime/sp/{i}.html"
+                html_out = f"out/lime/sp/{this_label}_{i}.html"
                 print("Saving explainations to file",html_out)
                 exp.save_to_file(html_out)
 

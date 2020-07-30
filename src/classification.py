@@ -11,6 +11,10 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 import random
 
+np.random.seed(42)
+random.seed(42)
+
+
 from src.data import get_data
 from src.models import get_model
 from src.train.trainer import train
@@ -31,4 +35,4 @@ model = train(model, data, load_existing = True)
 
 # predict(model, label_encoder, data)
 
-explain(model, data, n_samples=1, submodular_pick= True)
+explain(model, data, n_samples=1, submodular_pick= False)
