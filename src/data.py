@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import random
 
 import keras.utils
 
@@ -12,39 +13,22 @@ from sklearn.model_selection import train_test_split
 
 import pickle
 
-# a = {'hello': 'world'}
-
-# with open('filename.pickle', 'wb') as handle:
-#     pickle.dump(a, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-# with open('filename.pickle', 'rb') as handle:
-#     b = pickle.load(handle)
 
 def get_data(load_existing=True, fpkm=False):
     
     filename = "data/scaled_splitted_data.pickle"
     data_path = "../../data/exT.csv"
 
-    if fpkm == True:
-        filename = "data/fpkm_scaled_splitted_data.pickle"
-        data_path = "../../data/exT.csv"
-        fpkm_path = "../../data/FPKM_gene_counts_FPKM.csv"
-
-        print(f"Loading dataset:{fpkm_path}")
-
-        fpkm_df = pd.read_csv(fpkm_path)
-        print(f"Loaded dataset with shape:{fpkm_df.shape}")
 
 
     if load_existing == False:
         # ### IMPORTANT
         # 
         # Change the `nrows` below to train on full dataset.
-
-        
-        # df = pd.read_csv("../data/exT.csv",low_memory=False, nrows=2000) # First 2k dataset rows
-        # df = pd.read_csv(data_path, skiprows=lambda i: i>0 and random.random() > 0.5)  # random 50% of dataset rows
         print(f"Loading dataset:{data_path}")
+
+        # df = pd.read_csv(data_path,low_memory=False, nrows=2000) # First 2k dataset rows
+        #df = pd.read_csv(data_path, skiprows=lambda i: i>0 and random.random() > 0.2)  # random 50% of dataset rows
 
         df = pd.read_csv(data_path)
         print(f"Loaded dataset with shape:{df.shape}")
@@ -74,16 +58,49 @@ def get_data(load_existing=True, fpkm=False):
 
         Y = keras.utils.to_categorical(Y)  # verify this is of n length not 2
 
+
+        if fpkm == True:
+            filename = "data/scaled_splitted_data_with_fpkm.pickle"
+            fpkm_path = "../../data/FPKM_gene_counts_FPKM.csv"
+
+            print(f"Loading dataset:{fpkm_path}")
+
+            fpkm_df = pd.read_csv(fpkm_path)
+            print(f"Loaded dataset with shape:{fpkm_df.shape}")
+
+            fpkm_df = fpkm_df.applymap(lambda x: str(x).strip('gene-'))
+            fpkm_df = fpkm_df.set_index("Unnamed: 0").T
+
+            fpkm_df = fpkm_df.rename_axis(None).reset_index(drop=True)
+            fpkm_df = fpkm_df.astype(float).applymap(lambda x: np.log2(x + 1))
+
+            intersect_cols = np.intersect1d(df.columns, fpkm_df.columns)
+
+            print("Extracting interseted dataset.")
+            df = df[intersect_cols]
+            fpkm_df = fpkm_df[intersect_cols]
+        # else:
+            fpkm_data = fpkm_df.to_numpy()
+        
+
         # ### Train-Test Split (Stratified and shuffled)
         X_train, X_test, y_train, y_test = train_test_split(df, Y, test_size = 0.2, random_state = 42, stratify=Y, shuffle=True)
+        feature_names = df.columns
         
+        fpkm_df = None
+        df = None
 
         # ### Feature Scaling 
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test) 
 
-        feature_names = df.columns
+        if fpkm == True:
+            fpkm_data = scaler.transform(fpkm_data)
+        else:
+            fpkm_data = None
+
+
 
         if os.path.isfile(filename):
             print("File Exists...")
@@ -98,8 +115,10 @@ def get_data(load_existing=True, fpkm=False):
         temp = {
             "X_train":X_train, "X_test":X_test, 
             "y_train":y_train, "y_test":y_test,
-            "feature_names":df.columns,
-            "label_encoder":label_encoder
+            "feature_names":feature_names,
+            "label_encoder":label_encoder,
+
+            "fpkm_data" : fpkm_data
         }
 
         with open(filename, 'wb') as f:
