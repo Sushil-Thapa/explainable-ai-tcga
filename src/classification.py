@@ -23,7 +23,7 @@ from src.explainer import explain
 
 #### Model Definition
 
-data = get_data(load_existing=False, fpkm=True)
+data = get_data(load_existing=True, fpkm=True)
 (X_train, X_test, y_train, y_test, feature_names, label_encoder) = data
 # import pdb; pdb.set_trace()
 
@@ -31,7 +31,7 @@ input_dim, output_dim = X_train.shape[1], y_train.shape[1]
 print("input_dim, output_dim:", input_dim, output_dim)
 model = get_model(input_dim, output_dim)
 
-model = train(model, data, load_existing = True)
+model = train(model, data, load_existing = False)
 
 # predict(model, label_encoder, data)
 

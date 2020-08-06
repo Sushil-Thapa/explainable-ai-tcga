@@ -36,7 +36,7 @@ def train(model, data, load_existing = True):
         log_dir = f'{log_dir}/{exp_log_dir}'
         print(f"Saving models into: {log_dir}")
 
-        tb_callback = tf.keras.callbacks.TensorBoard(log_dir= 3)
+        #tb_callback = tf.keras.callbacks.TensorBoard(log_dir= 3)
 
 
         optimizer = Adam(
@@ -51,6 +51,6 @@ def train(model, data, load_existing = True):
                             verbose=1, 
                             epochs=epochs, 
                             shuffle=True,
-                            callbacks = [cp_callback, tb_callback])
+                            callbacks = [cp_callback])
     
     return model
