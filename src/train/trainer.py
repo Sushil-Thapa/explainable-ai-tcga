@@ -17,7 +17,7 @@ def train(model, data, load_existing = True):
     else:
         epochs = 15
         # ## Training
-        (X_train, X_test, y_train, y_test, feature_names, label_encoder) = data
+        (X_train, X_test, y_train, y_test, feature_names, label_encoder, fpkm_data) = data
 
         
         checkpoint_dir = os.path.dirname(checkpoint_path)

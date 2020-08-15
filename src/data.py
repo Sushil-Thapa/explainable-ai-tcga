@@ -17,7 +17,7 @@ import pickle
 def get_data(load_existing=True, fpkm=False):
     
     filename = "data/scaled_splitted_data.pickle"
-    data_path = "../../data/exT.csv"
+    data_path = "data/exT.csv"
     if fpkm:
         filename = "data/scaled_splitted_data_with_fpkm.pickle"
 
@@ -61,21 +61,20 @@ def get_data(load_existing=True, fpkm=False):
 
         if fpkm == True:
             
-            fpkm_path = "../../data/FPKM_gene_counts_FPKM.csv"
+            fpkm_path = "data/FPKM_gene_counts_FPKM.csv"
 
             print(f"Loading dataset:{fpkm_path}")
 
             fpkm_df = pd.read_csv(fpkm_path)
             print(f"Loaded dataset with shape:{fpkm_df.shape}")
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             fpkm_df = fpkm_df.dropna(axis=1)
 
             fpkm_df = fpkm_df.applymap(lambda x: str(x).strip('gene-'))
             fpkm_df = fpkm_df.set_index("Unnamed: 0").T
 
             fpkm_df = fpkm_df.rename_axis(None).reset_index(drop=True)
-            fpkm_df = fpkm_df.astype(float).applymap(lambda x: np.log2(x + 1))
-
+            #fpkm_df = fpkm_df.astype(float).applymap(lambda x: np.log2(x + 1))
 
             intersect_cols = np.intersect1d(df.columns, fpkm_df.columns)
 
@@ -83,7 +82,8 @@ def get_data(load_existing=True, fpkm=False):
             df = df[intersect_cols]
             fpkm_df = fpkm_df[intersect_cols]
         # else:
-            fpkm_data = fpkm_df.to_numpy()
+            fpkm_data = fpkm_df.to_numpy().astype('float')
+            print(fpkm_data)
         
 
         # ### Train-Test Split (Stratified and shuffled)
@@ -98,10 +98,10 @@ def get_data(load_existing=True, fpkm=False):
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test) 
 
-        if fpkm == True:
-            fpkm_data = scaler.transform(fpkm_data)
-        else:
-            fpkm_data = None
+        #if fpkm == True:
+            #fpkm_data = scaler.transform(fpkm_data)
+        #else:
+            #fpkm_data = None
 
 
 
@@ -139,8 +139,9 @@ def get_data(load_existing=True, fpkm=False):
 
         X_train, X_test, y_train, y_test = a["X_train"], a["X_test"], a["y_train"], a["y_test"]
         feature_names, label_encoder = a["feature_names"], a["label_encoder"]
+        fpkm_data = a["fpkm_data"]
         print(f"Successfully loaded from existing dump {filename}")
 
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-    return (X_train, X_test, y_train, y_test, feature_names, label_encoder)
+    return (X_train, X_test, y_train, y_test, feature_names, label_encoder, fpkm_data)
 
