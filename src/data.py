@@ -3,6 +3,8 @@ import os,sys
 import numpy as np
 import pandas as pd
 import random
+import pickle
+
 
 import keras.utils
 
@@ -11,15 +13,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
 
-import pickle
+
+from src.settings import data_path, fpkm_data_path
+from src.settings import pickle_filename, fpkm_pickle_filename
 
 
 def get_data(load_existing=True, fpkm=False):
     
-    filename = "data/scaled_splitted_data.pickle"
-    data_path = "data/exT.csv"
-    if fpkm:
-        filename = "data/scaled_splitted_data_with_fpkm.pickle"
+    filename = pickle_filename if fpkm else fpkm_pickle_filename
 
     if load_existing == False:
         # ### IMPORTANT
@@ -60,12 +61,9 @@ def get_data(load_existing=True, fpkm=False):
 
 
         if fpkm == True:
-            
-            fpkm_path = "data/FPKM_gene_counts_FPKM.csv"
+            print(f"Loading fpkm dataset:{fpkm_data_path}")
 
-            print(f"Loading dataset:{fpkm_path}")
-
-            fpkm_df = pd.read_csv(fpkm_path)
+            fpkm_df = pd.read_csv(fpkm_data_path)
             print(f"Loaded dataset with shape:{fpkm_df.shape}")
             #import pdb; pdb.set_trace()
             fpkm_df = fpkm_df.dropna(axis=1)
@@ -83,7 +81,6 @@ def get_data(load_existing=True, fpkm=False):
             fpkm_df = fpkm_df[intersect_cols]
         # else:
             fpkm_data = fpkm_df.to_numpy().astype('float')
-            print(fpkm_data)
         
 
         # ### Train-Test Split (Stratified and shuffled)

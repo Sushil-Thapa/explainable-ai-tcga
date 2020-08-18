@@ -1,6 +1,13 @@
-import os 
+import os
+from src.settings import SEED_VALUE
+
+os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
+
 import glob
 import tensorflow as tf
+
+tf.random.set_seed(SEED_VALUE)
+
 from tensorflow.keras.optimizers import Adam
 
 print("GPU Test:", tf.config.list_physical_devices('GPU'), tf.test.is_built_with_gpu_support(), tf.test.is_built_with_cuda())

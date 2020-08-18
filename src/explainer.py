@@ -23,13 +23,13 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, seed=42, submodul
 
 
     if submodular_pick == False:
-        for n in range(66, n_samples):
+        for n in range(66, n_samples):  #?????
             start = time.time()
             print("Starting explaining the instance...")
             #ith = np.random.randint(0, X_test.shape[0])
             #ith = 774
             for ith, d in enumerate(explain_data):
-                print(f"\n{srt_idx+ith},th sample \t Run: {n}")
+                print(f"\n{srt_idx+ith}th sample \t Run: {n}")
                 # For this multi-class classification problem, we set the top_labels parameter, so that we only explain the top class with the highest level of probability.
                 
                 exp = explainer.explain_instance(d, model.predict_proba, num_features=num_features, top_labels=top_labels)
@@ -47,7 +47,7 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, seed=42, submodul
                 print("Error R2 Score:",exp.score) # 0-1 worse-better
             
                 for i in exp_avilable_labels:
-                    print(f"\n{srt_idx+ith}sample, {i}th class explaination: {label_encoder.classes_[i]}")
+                    print(f"\nsample {srt_idx+ith}: class {i}: {label_encoder.classes_[i]}")
                 #     display(pd.DataFrame(exp.as_list(label=i)))
                     print(exp.as_list(label=i))
 

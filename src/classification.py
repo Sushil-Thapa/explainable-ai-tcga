@@ -1,24 +1,27 @@
-# coding: utf-8
+import os
+from src.settings import SEED_VALUE
+os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
 
-import os,sys
-
-import pandas as pd
-import numpy as np
-
-
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn import metrics
 import random
 import argparse
+import sys
 
-np.random.seed(42)
-random.seed(42)
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+import tensorflow as tf
+
+
+np.random.seed(SEED_VALUE)
+random.seed(SEED_VALUE)
 
 parser = argparse.ArgumentParser(description='arguments for sample number and run number')
 
 parser.add_argument('--sample_srt', type=int, choices=list(range(15)), default=0)
-parser.add_argument('--sample_end', type=int, choices=list(range(16)), default=15)
+parser.add_argument('--sample_end', type=int, choices=list(range(16)), default=1)
 args = parser.parse_args()
 
 from src.data import get_data
@@ -31,7 +34,6 @@ from src.explainer import explain
 
 data = get_data(load_existing=True, fpkm=True)
 (X_train, X_test, y_train, y_test, feature_names, label_encoder, fpkm_data) = data
-# import pdb; pdb.set_trace()
 
 input_dim, output_dim = X_train.shape[1], y_train.shape[1]
 print("input_dim, output_dim:", input_dim, output_dim)
