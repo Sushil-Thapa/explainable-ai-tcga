@@ -1,11 +1,18 @@
+import os
+
+from src.settings import SEED_VALUE
+os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
+
+import time
 import numpy as np
 import lime
 import lime.lime_tabular
-import time
+
+import random
 
 # we compute statistics on each feature (column). If the feature is numerical, we compute the mean and std, and discretize it into quartiles
 
-def explain(model, data, explain_data, srt_idx=0, n_samples=3, seed=42, submodular_pick= False):
+def explain(model, data, explain_data, srt_idx=0, n_samples=3, submodular_pick= False):
     print("Starting Explainer module...")
     num_features = 10  # maximum number of features present in the explainations
     top_labels = 1  # number of max probable classes to consider
@@ -18,7 +25,7 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, seed=42, submodul
     print("Preparing tabular explainer...")
     explainer = lime.lime_tabular.LimeTabularExplainer(X_train, 
                                                     feature_names=feature_names, 
-                                                    class_names=label_encoder.classes_, random_state=seed)
+                                                    class_names=label_encoder.classes_, random_state=SEED_VALUE)
     print("Explainer preparation complete. Elapsed time:", time.time() - start)
 
 
@@ -31,7 +38,10 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, seed=42, submodul
             for ith, d in enumerate(explain_data):
                 print(f"\n{srt_idx+ith}th sample \t Run: {n}")
                 # For this multi-class classification problem, we set the top_labels parameter, so that we only explain the top class with the highest level of probability.
-                
+
+                random.seed(SEED_VALUE)
+                np.random.seed(SEED_VALUE)
+
                 exp = explainer.explain_instance(d, model.predict_proba, num_features=num_features, top_labels=top_labels)
             
                 # exp.show_in_notebook(show_table=True, show_all=False)
