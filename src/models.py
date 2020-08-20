@@ -1,11 +1,11 @@
 import os
 
 from src.settings import SEED_VALUE
-os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
+# os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
-tf.random.set_seed(SEED_VALUE)
+# tf.random.set_seed(SEED_VALUE)
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout

@@ -20,7 +20,7 @@ from src.settings import pickle_filename, fpkm_pickle_filename
 
 def get_data(load_existing=True, fpkm=False):
     
-    filename = pickle_filename if fpkm else fpkm_pickle_filename
+    filename = fpkm_pickle_filename if fpkm else pickle_filename
 
     if load_existing == False:
         # ### IMPORTANT
@@ -72,7 +72,7 @@ def get_data(load_existing=True, fpkm=False):
             fpkm_df = fpkm_df.set_index("Unnamed: 0").T
 
             fpkm_df = fpkm_df.rename_axis(None).reset_index(drop=True)
-            #fpkm_df = fpkm_df.astype(float).applymap(lambda x: np.log2(x + 1))
+            #fpkm_df = fpkm_df.astype(float).applymap(lambda x: np.log2(x + 1)) # commenting this as apparently this is normalized.
 
             intersect_cols = np.intersect1d(df.columns, fpkm_df.columns)
 
@@ -96,7 +96,7 @@ def get_data(load_existing=True, fpkm=False):
         X_test = scaler.transform(X_test) 
 
         #if fpkm == True:
-            #fpkm_data = scaler.transform(fpkm_data)
+            #fpkm_data = scaler.transform(fpkm_data)  # commenting this as apparently it is transformed as well.
         #else:
             #fpkm_data = None
 

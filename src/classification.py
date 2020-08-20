@@ -1,6 +1,6 @@
 import os
 from src.settings import SEED_VALUE
-os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
+# os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
 
 import random
 import argparse
@@ -15,20 +15,22 @@ from sklearn import metrics
 import tensorflow as tf
 
 
-np.random.seed(SEED_VALUE)
-random.seed(SEED_VALUE)
-
-parser = argparse.ArgumentParser(description='arguments for sample number and run number')
-
-parser.add_argument('--sample_srt', type=int, choices=list(range(15)), default=0)
-parser.add_argument('--sample_end', type=int, choices=list(range(16)), default=1)
-args = parser.parse_args()
-
 from src.data import get_data
 from src.models import get_model
 from src.train.trainer import train
 from src.train.test import predict
 from src.explainer import explain
+
+
+print(f'seed value:{SEED_VALUE}')
+# np.random.seed(SEED_VALUE)
+# random.seed(SEED_VALUE)
+
+parser = argparse.ArgumentParser(description='arguments for sample number and run number')
+
+parser.add_argument('--sample_srt', type=int, choices=list(range(15)), default=0)
+parser.add_argument('--sample_end', type=int, choices=list(range(16)), default=3)
+args = parser.parse_args()
 
 #### Model Definition
 
@@ -43,4 +45,5 @@ model = train(model, data, load_existing = True)
 
 # predict(model, label_encoder, data)
 
-explain(model, data, explain_data=fpkm_data[args.sample_srt:args.sample_end], srt_idx=args.sample_srt,  n_samples=100, submodular_pick=False)
+explain(model, data, explain_data=fpkm_data[args.sample_srt:args.sample_end], \
+        srt_idx=args.sample_srt,  n_samples=1, submodular_pick=False)

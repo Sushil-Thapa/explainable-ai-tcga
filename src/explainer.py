@@ -1,14 +1,14 @@
 import os
 
-from src.settings import SEED_VALUE
-os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
+from src.settings import SEED_VALUE, lime_out_path, splime_out_path
+# os.environ['PYTHONHASHSEED']=str(SEED_VALUE)
 
 import time
 import numpy as np
 import lime
 import lime.lime_tabular
-
 import random
+
 
 # we compute statistics on each feature (column). If the feature is numerical, we compute the mean and std, and discretize it into quartiles
 
@@ -23,47 +23,14 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, submodular_pick= 
     
     start = time.time()
     print("Preparing tabular explainer...")
+    print("\n\nComment:  Verified reproducible results.")
     explainer = lime.lime_tabular.LimeTabularExplainer(X_train, 
                                                     feature_names=feature_names, 
                                                     class_names=label_encoder.classes_, random_state=SEED_VALUE)
     print("Explainer preparation complete. Elapsed time:", time.time() - start)
 
 
-    if submodular_pick == False:
-        for n in range(66, n_samples):  #?????
-            start = time.time()
-            print("Starting explaining the instance...")
-            #ith = np.random.randint(0, X_test.shape[0])
-            #ith = 774
-            for ith, d in enumerate(explain_data):
-                print(f"\n{srt_idx+ith}th sample \t Run: {n}")
-                # For this multi-class classification problem, we set the top_labels parameter, so that we only explain the top class with the highest level of probability.
-
-                random.seed(SEED_VALUE)
-                np.random.seed(SEED_VALUE)
-
-                exp = explainer.explain_instance(d, model.predict_proba, num_features=num_features, top_labels=top_labels)
-            
-                # exp.show_in_notebook(show_table=True, show_all=False)
-                # feature1 ≤ X means when this feature’s value satisfy this criteria it support class 0.   
-                # Float point number on the horizontal bars represent the relative importance of these features.
-
-                exp_avilable_labels = exp.available_labels()
-                print("Number of labels to analyze",len(exp_avilable_labels))
-
-                html_out = f"out/lime/{n}_{srt_idx + ith}.html"
-                print("Saving explainations to file",html_out)
-                exp.save_to_file(html_out)
-                print("Error R2 Score:",exp.score) # 0-1 worse-better
-            
-                for i in exp_avilable_labels:
-                    print(f"\nsample {srt_idx+ith}: class {i}: {label_encoder.classes_[i]}")
-                #     display(pd.DataFrame(exp.as_list(label=i)))
-                    print(exp.as_list(label=i))
-
-            print("Iteration complete, Elapsed time:", time.time() - start)
-
-    else:
+    if submodular_pick:
         print("Preparing submodular-pick engines...")
         num_exps_desired = 5  # number of exp objects returned.
         sample_size = 5 # number of instances to explain 
@@ -74,7 +41,8 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, submodular_pick= 
         from lime import submodular_pick
 
         start = time.time()
-        sp_obj = submodular_pick.SubmodularPick(explainer, X_train, model.predict_proba, top_labels = top_labels, sample_size = sample_size, num_features=num_features,num_exps_desired=num_exps_desired)
+        sp_obj = submodular_pick.SubmodularPick(explainer, X_train, model.predict_proba, top_labels = top_labels, \
+            sample_size = sample_size, num_features=num_features,num_exps_desired=num_exps_desired)
         print("Submodular pick complete. Elapsed time:", time.time() - start)
 
         df=pd.DataFrame({})
@@ -99,8 +67,44 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, submodular_pick= 
             print(df)
             print("Iteration complete, Elapsed time:", time.time() - start)
 
-        df.to_csv("out/lime/sp/sp_out_5.csv")
+        df.to_csv(f"{splime_out_path}/sp_out.csv")
 
+
+
+    else:
+        for n in range(n_samples):  #?????
+            start = time.time()
+            print("Starting explaining the instance...",n)
+            #ith = np.random.randint(0, X_test.shape[0])
+            #ith = 774
+            for ith, d in enumerate(explain_data):
+                print(f"\n{srt_idx}_{ith}th sample \t Run: {n}")
+                # For this multi-class classification problem, we set the top_labels parameter, so that we only explain the top class with the highest level of probability.
+
+                # random.seed(SEED_VALUE)
+                # np.random.seed(SEED_VALUE)
+
+                exp = explainer.explain_instance(d, model.predict_proba, num_features=num_features, \
+                    top_labels=top_labels, num_samples=5000)
+            
+                # exp.show_in_notebook(show_table=True, show_all=False)
+                # feature1 ≤ X means when this feature’s value satisfy this criteria it support class 0.   
+                # Float point number on the horizontal bars represent the relative importance of these features.
+
+                exp_avilable_labels = exp.available_labels()
+                print("Number of labels to analyze",len(exp_avilable_labels))
+
+                html_out = f"{lime_out_path}/{n}_{srt_idx}_{ith}.html"
+                print("Saving explainations to file",html_out)
+                exp.save_to_file(html_out)
+                print("Error R2 Score:",exp.score) # 0-1 worse-better
+            
+                for i in exp_avilable_labels:
+                    print(f"\nsample {srt_idx+ith}: class {i}: {label_encoder.classes_[i]}")
+                #     display(pd.DataFrame(exp.as_list(label=i)))
+                    print(exp.as_list(label=i))
+
+            print("Iteration complete, Elapsed time:", time.time() - start)
 
 
     

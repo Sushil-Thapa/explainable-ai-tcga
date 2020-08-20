@@ -11,3 +11,5 @@ fpkm_data_path = os.path.join(DATA_DIR, "FPKM_gene_counts_FPKM.csv")
 pickle_filename = os.path.join(DATA_DIR, "scaled_splitted_data.pickle")
 fpkm_pickle_filename = os.path.join(DATA_DIR, "scaled_splitted_data_with_fpkm.pickle")
 
+lime_out_path = os.path.join(BASE_DIR,"out","lime")
+splime_out_path = os.path.join(BASE_DIR,"out","sp")
