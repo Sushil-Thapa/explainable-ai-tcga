@@ -9,17 +9,18 @@ import tensorflow as tf
 tf.random.set_seed(SEED_VALUE)
 
 from tensorflow.keras.optimizers import Adam
+from src.settings import model_checkpoint_path
+
 
 print("GPU Test:", tf.config.list_physical_devices('GPU'), tf.test.is_built_with_gpu_support(), tf.test.is_built_with_cuda())
 
 
 def train(model, data, load_existing = True):
     print("Starting trainer module...")
-    checkpoint_path = "out/cp.ckpt"
 
 
     if load_existing == True:
-        model.load_weights(checkpoint_path)
+        model.load_weights(model_checkpoint_path)
 
     else:
         epochs = 15
@@ -27,10 +28,10 @@ def train(model, data, load_existing = True):
         (X_train, X_test, y_train, y_test, feature_names, label_encoder, fpkm_data) = data
 
         
-        checkpoint_dir = os.path.dirname(checkpoint_path)
+        checkpoint_dir = os.path.dirname(model_checkpoint_path)
 
         # Create a callback that saves the model's weights
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=model_checkpoint_path,
                                                         save_weights_only=True,
                                                         save_best_only=True,
                                                         monitor='val_accuracy',

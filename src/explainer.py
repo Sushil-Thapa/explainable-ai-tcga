@@ -85,7 +85,7 @@ def explain(model, data, explain_data, srt_idx=0, n_samples=3, submodular_pick= 
                 # np.random.seed(SEED_VALUE)
 
                 exp = explainer.explain_instance(d, model.predict_proba, num_features=num_features, \
-                    top_labels=top_labels, num_samples=5000)
+                    top_labels=top_labels, num_samples=10000)
             
                 # exp.show_in_notebook(show_table=True, show_all=False)
                 # feature1 ≤ X means when this feature’s value satisfy this criteria it support class 0.   

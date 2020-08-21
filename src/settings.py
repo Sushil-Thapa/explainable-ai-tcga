@@ -13,3 +13,5 @@ fpkm_pickle_filename = os.path.join(DATA_DIR, "scaled_splitted_data_with_fpkm.pi
 
 lime_out_path = os.path.join(BASE_DIR,"out","lime")
 splime_out_path = os.path.join(BASE_DIR,"out","sp")
+
+model_checkpoint_path = "out/checkpoints/cp.ckpt"
