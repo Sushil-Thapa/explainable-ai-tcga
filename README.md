@@ -20,6 +20,8 @@ h5py
 and more...
 
 # Running the project
+- Add data to train the model to `data/` directory. 
+- Command to train the model and extract explainations.
 ```python
 python -m src.classification
 ```
