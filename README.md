@@ -1,5 +1,7 @@
-# Determination of Classification on Genomes
-The Cancer Genome Atlas Program
+# Determination of Classification on Cancer Genomes
+Exploring the explainability of neurons indentifying the cancerous tissues. 
+
+Dataset: [The Cancer Genome Atlas Program and TCGA dataset](https://www.cancer.gov/about-nci/organization/ccg/research/structural-genomics/tcga)
 
 # Dependencies
 ```
