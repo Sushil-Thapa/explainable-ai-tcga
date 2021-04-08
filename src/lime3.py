@@ -1,0 +1,195 @@
+import os,sys
+
+import pandas as pd
+import numpy as np
+import keras
+import tensorflow as tf
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
+import keras.utils
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+
+from sklearn import metrics
+import random
+
+# Load dataset
+tcga_path = "/data/cancer/GDC/new/metadata/LexT.csv"
+tcga_path = "../exT.csv"
+df = pd.read_csv(tcga_path)
+
+epochs = 2
+
+# rename labels column
+df = df.rename(columns={'Unnamed: 0':'labels'})
+
+# map numbered labels to single name
+df['Y'] = df['labels'].apply(lambda x: x.split(".")[0])
+
+#plot the distribution 
+# df['Y'].value_counts().plot(kind='barh', figsize = (10,6))
+
+# encode class names with IDs
+label_encoder = LabelEncoder()
+df['Y'] = label_encoder.fit_transform(df['Y'])
+print(f"Number of classes:{len(label_encoder.classes_)}\n\nClasses:\n{label_encoder.classes_}")
+
+
+labels = df.pop("labels")
+Y = df.pop("Y")
+
+"""### Converting Y into 1-hot"""
+Y = keras.utils.to_categorical(Y)  # verify this is of n length not 2
+
+"""### Train-Test Split (Stratified and shuffled)"""
+X_train, X_test, y_train, y_test = train_test_split(df, Y, test_size = 0.2, random_state = 42, stratify=Y, shuffle=True)
+
+"""### Feature Standardization"""
+# scaler = StandardScaler()
+# X_train = scaler.fit_transform(X_train)
+# X_test = scaler.transform(X_test) 
+
+"""### Model Definition& Config"""
+tf.keras.backend.clear_session() # reset keras session
+model = Sequential()
+model.add(Dense(1024, activation="relu", input_dim = X_train.shape[1]))
+model.add(Dense(512, activation="relu"))
+model.add(Dense(128, activation="relu"))
+model.add(Dense(y_train.shape[1], activation="softmax"))
+model.summary()
+
+## Add model training configs
+checkpoint_path = "cp.ckpt"
+checkpoint_dir = os.path.dirname(checkpoint_path)
+
+# Create a callback that saves the model's weights
+cp_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
+                                                 save_weights_only=True,
+                                                  save_best_only=True,
+                                                  monitor='val_accuracy',
+                                                 verbose=1)
+
+es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True)
+
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=['categorical_crossentropy','accuracy'])
+
+"""## Training"""
+history = model.fit(X_train, y_train, 
+                    validation_data=(X_test, y_test), 
+                    verbose=1, 
+                    epochs=epochs, 
+                    shuffle=True,
+                    callbacks = [ es_callback, cp_callback])
+
+
+"""## Evaluating with Validation set"""
+# Prediction class ID for test set
+predicted_valid_labels = np.argmax(model.predict(X_test), axis=1)
+
+#TODO uncomment this to get real ground truth values from TCGA
+# Extract class ID for ground truth
+valid_labels = np.argmax(y_test, axis=1)
+
+# number of test set for inspection
+#TODO change this value to get var number of prediction
+test_range = range(10)
+
+# This maps groundtruth class encoded  values to class name
+real = label_encoder.inverse_transform(valid_labels[test_range])
+
+# This maps predicted class encoded  values to class name
+predicts = label_encoder.inverse_transform(predicted_valid_labels[test_range])
+
+ # dict of real vs prediction classes // for purpose of comparision
+# print("real:preds\n",{real[i]:predicts[i] for i in test_range}) 
+
+#TODO uncomment this line to get the labels of TCGA
+print("True labels: ", real)
+
+print("Predicted labels: ", predicts)
+pred_max_prob = list((np.max(model.predict(X_test), axis=1)*10000).astype(int)/100)
+print("prediction max prob:", pred_max_prob)
+
+# Visualization of Confusion Matrix
+"""
+cm = metrics.confusion_matrix(valid_labels, predicted_valid_labels)
+# print(cm)
+cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+plt.figure(figsize=(20,20))
+sns.heatmap(cm_normalized, annot=True, fmt=".4f", linewidths=.5, square = True, cmap = 'summer')
+plt.xlabel('Predicted Values', size=20)
+plt.ylabel('Actual Values', size=20)
+
+ticks = np.arange(len(set(valid_labels)))
+
+plt.xticks(ticks+0.5 ,label_encoder.classes_, rotation=90, size=12) #add 0.5 to ticks to position it at center
+plt.yticks(ticks+0.5 ,label_encoder.classes_, rotation=0, size=12)
+# all_sample_title = 'Accuracy Score: {:.4f}'.format(93) # hardcoded this from training logs for now :D
+# plt.title(all_sample_title, size = 30)
+plt.show()
+""" 
+# Confusion matrix viz end
+
+## Lime Explainer
+"""
+import lime
+import lime.lime_tabular
+import time
+
+# we compute statistics on each feature (column). If the feature is numerical, we compute the mean and std, and discretize it into quartiles
+
+start = time.time()
+explainer = lime.lime_tabular.LimeTabularExplainer(X_train, 
+                                                   feature_names=df.columns, 
+                                                   class_names=label_encoder.classes_)
+print("Elapsed time:", time.time() - start)
+
+#for _ in range(5):100 181-200 300 400 500 600 700 800 900
+for i in (186,193):
+    fname="out" + str(i)
+    start = time.time()
+    ith = i
+    exp = explainer.explain_instance(X_test[ith], model.predict_proba, num_features=20, top_labels=1, num_samples=10000)
+    exp.save_to_file(fname,show_table=True)
+    print("Iteration Elapsed time:", time.time() - start)
+
+#exp.show_in_notebook(show_table=True, show_all=True)
+    
+#for i in exp.available_labels():
+
+exp.save_to_file("ss.1.html",show_table=True, show_all=True)
+print("Iteration Elapsed time:", time.time() - start)
+
+
+
+
+
+# For this multi-class classification problem, we set the top_labels parameter, so that we only explain the top class with the highest level of probability.
+
+# # %%prun
+# start = time.time()
+# i = np.random.randint(0, X_test.shape[0])
+# print(i)
+# exp = explainer.explain_instance(X_test[i], model.predict_proba, num_features=10, top_labels=5)
+# print(time.time() - start)
+
+# exp.show_in_notebook(show_table=True, show_all=False)
+
+# eature1 ≤ X means when this feature’s value satisfy this criteria it support class 0.   
+# Float point number on the horizontal bars represent the relative importance of these features.
+
+
+# exp.show_in_notebook(show_table=True, show_all=True)
+
+# #for easier analysis and further processing
+# for i in exp.available_labels():
+#     print(label_encoder.classes_[i])
+# #     display(pd.DataFrame(exp.as_list(label=i)))
+#     display(exp.as_list(label=i))
+
+"""
+# lime explainer end
