@@ -16,15 +16,24 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
 from sklearn import metrics
 import random
 
-# Load dataset
-tcga_path = "/data/cancer/GDC/new/metadata/LexT.csv"
-tcga_path = "../exT.csv"
-df = pd.read_csv(tcga_path)
-
 epochs = 2
+random_state = 42
+
+# number of test set sample(tcga) for inspection
+n_tcga_test = 30
+n_tcga_test_range = range(-n_tcga_test,0)
+
+# Load dataset
+# tcga_path = "/data/cancer/GDC/new/metadata/LexT.csv"
+# tcga_path = "../exT.csv"
+tcga_path = "TCGA.NMJ12.log.csv"
+df = pd.read_csv(tcga_path)
 
 # rename labels column
 df = df.rename(columns={'Unnamed: 0':'labels'})
+
+# extract last 30 columns  for stem cell
+df, stem_df = df.copy().iloc[:-30,:], df.iloc[-30:,:]
 
 # map numbered labels to single name
 df['Y'] = df['labels'].apply(lambda x: x.split(".")[0])
@@ -38,15 +47,26 @@ df['Y'] = label_encoder.fit_transform(df['Y'])
 print(f"Number of classes:{len(label_encoder.classes_)}\n\nClasses:\n{label_encoder.classes_}")
 
 
-labels = df.pop("labels")
+_ = df.pop("labels")
 Y = df.pop("Y")
 
 """### Converting Y into 1-hot"""
-Y = keras.utils.to_categorical(Y)  # verify this is of n length not 2
+Y = keras.utils.to_categorical(Y)  
+
+### Prepare stem Cell dataset
+stem_day = stem_df.pop('labels') # remove Stem Info
+stem_X = stem_df.copy() # Remaining stem cell feats
+
+#TODO to Apply Log on tcga dataset
+# This line applies log on all the dataset df // df is only the tcga part of the csv Ben provided
+# please uncomment and change the last np.exe(-8) part to any other value as necessary for eg 10e-4
+# df = df.astype(float).applymap(lambda x: np.log(x + np.exp(-8)))
+# stem_X = stem_X.astype(float).applymap(lambda x: np.log(x + np.exp(-8)))
 
 """### Train-Test Split (Stratified and shuffled)"""
-X_train, X_test, y_train, y_test = train_test_split(df, Y, test_size = 0.2, random_state = 42, stratify=Y, shuffle=True)
+X_train, X_test, y_train, y_test = train_test_split(df, Y, test_size = 0.2, random_state = random_state, stratify=Y, shuffle=True)
 
+#TODO uncomment this to run standaridization
 """### Feature Standardization"""
 # scaler = StandardScaler()
 # X_train = scaler.fit_transform(X_train)
@@ -87,31 +107,36 @@ history = model.fit(X_train, y_train,
 
 """## Evaluating with Validation set"""
 # Prediction class ID for test set
-predicted_valid_labels = np.argmax(model.predict(X_test), axis=1)
+preds = model.predict(X_test)
+predicted_valid_labels = np.argmax(preds, axis=1)
 
 #TODO uncomment this to get real ground truth values from TCGA
 # Extract class ID for ground truth
 valid_labels = np.argmax(y_test, axis=1)
 
-# number of test set for inspection
-#TODO change this value to get var number of prediction
-test_range = range(10)
-
 # This maps groundtruth class encoded  values to class name
-real = label_encoder.inverse_transform(valid_labels[test_range])
+real = label_encoder.inverse_transform(valid_labels[n_tcga_test_range])
 
 # This maps predicted class encoded  values to class name
-predicts = label_encoder.inverse_transform(predicted_valid_labels[test_range])
+predicts = label_encoder.inverse_transform(predicted_valid_labels[n_tcga_test_range])
 
  # dict of real vs prediction classes // for purpose of comparision
-# print("real:preds\n",{real[i]:predicts[i] for i in test_range}) 
+# print("real:preds\n",{real[i]:predicts[i] for i in n_tcga_test_range}) 
 
 #TODO uncomment this line to get the labels of TCGA
-print("True labels: ", real)
+print("True TCGA labels: \n", real)
 
-print("Predicted labels: ", predicts)
-pred_max_prob = list((np.max(model.predict(X_test), axis=1)*10000).astype(int)/100)
-print("prediction max prob:", pred_max_prob)
+print("Predicted tcga class: \n", predicts)
+pred_max_prob = list((np.max(preds, axis=1)[n_tcga_test_range]*10000).astype(int)/100)
+print("prediction tcga max prob:\n", pred_max_prob)
+
+# StemCell prediction
+preds_stem = model.predict(stem_X)
+print("Predicted stem class: \n", label_encoder.inverse_transform(np.argmax(preds_stem, axis=1)))
+print("Predicted stem max prob: \n", list((np.max(preds_stem, axis=1)*10000).astype(int)/100))
+
+# ************************************************************************************************
+
 
 # Visualization of Confusion Matrix
 """
