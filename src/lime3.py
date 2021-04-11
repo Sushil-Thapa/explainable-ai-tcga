@@ -10,14 +10,19 @@ import keras.utils
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+import lime
+import lime.lime_tabular
+import time
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
 
 from sklearn import metrics
 import random
 
-epochs = 2
+epochs = 3
 random_state = 42
+train_flag = False
 
 # number of test set sample(tcga) for inspection
 n_tcga_test = 30
@@ -26,6 +31,7 @@ n_tcga_test_range = range(-n_tcga_test,0)
 # Load dataset
 # tcga_path = "/data/cancer/GDC/new/metadata/LexT.csv"
 # tcga_path = "../exT.csv"
+tcga_path = "../TCGA.NMJ12.log.csv"
 tcga_path = "TCGA.NMJ12.log.csv"
 df = pd.read_csv(tcga_path)
 
@@ -96,103 +102,79 @@ es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=
 
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=['categorical_crossentropy','accuracy'])
 
-"""## Training"""
-history = model.fit(X_train, y_train, 
-                    validation_data=(X_test, y_test), 
-                    verbose=1, 
-                    epochs=epochs, 
-                    shuffle=True,
-                    callbacks = [ es_callback, cp_callback])
+if train_flag:  # just load model and get explanations if not training
+    """## Training"""
+    history = model.fit(X_train, y_train, 
+                        validation_data=(X_test, y_test), 
+                        verbose=1, 
+                        epochs=epochs, 
+                        shuffle=True,
+                        callbacks = [ es_callback, cp_callback])
+
+    # StemCell prediction
+    preds_stem = model.predict(stem_X)
+    print("Predicted stem class: \n", label_encoder.inverse_transform(np.argmax(preds_stem, axis=1)))
+    print("Predicted stem max prob: \n", list((np.max(preds_stem, axis=1)*10000).astype(int)/100))
 
 
-"""## Evaluating with Validation set"""
-# Prediction class ID for test set
-preds = model.predict(X_test)
-predicted_valid_labels = np.argmax(preds, axis=1)
+    """## Evaluating with Validation set"""
+    # Prediction class ID for test set
+    preds = model.predict(X_test)
+    predicted_valid_labels = np.argmax(preds, axis=1)
 
-#TODO uncomment this to get real ground truth values from TCGA
-# Extract class ID for ground truth
-valid_labels = np.argmax(y_test, axis=1)
+    #TODO uncomment this to get real ground truth values from TCGA
+    # Extract class ID for ground truth
+    valid_labels = np.argmax(y_test, axis=1)
 
-# This maps groundtruth class encoded  values to class name
-real = label_encoder.inverse_transform(valid_labels[n_tcga_test_range])
+    # This maps groundtruth class encoded  values to class name
+    real = label_encoder.inverse_transform(valid_labels[n_tcga_test_range])
 
-# This maps predicted class encoded  values to class name
-predicts = label_encoder.inverse_transform(predicted_valid_labels[n_tcga_test_range])
+    # This maps predicted class encoded  values to class name
+    predicts = label_encoder.inverse_transform(predicted_valid_labels[n_tcga_test_range])
 
- # dict of real vs prediction classes // for purpose of comparision
-# print("real:preds\n",{real[i]:predicts[i] for i in n_tcga_test_range}) 
+    # dict of real vs prediction classes // for purpose of comparision
+    # print("real:preds\n",{real[i]:predicts[i] for i in n_tcga_test_range}) 
 
-#TODO uncomment this line to get the labels of TCGA
-print("True TCGA labels: \n", real)
+    #TODO uncomment this line to get the labels of TCGA
+    print("True TCGA labels: \n", real)
 
-print("Predicted tcga class: \n", predicts)
-pred_max_prob = list((np.max(preds, axis=1)[n_tcga_test_range]*10000).astype(int)/100)
-print("prediction tcga max prob:\n", pred_max_prob)
+    print("Predicted tcga class: \n", predicts)
+    pred_max_prob = list((np.max(preds, axis=1)[n_tcga_test_range]*10000).astype(int)/100)
+    print("prediction tcga max prob:\n", pred_max_prob)
+    exit()  # exits after training.
 
-# StemCell prediction
-preds_stem = model.predict(stem_X)
-print("Predicted stem class: \n", label_encoder.inverse_transform(np.argmax(preds_stem, axis=1)))
-print("Predicted stem max prob: \n", list((np.max(preds_stem, axis=1)*10000).astype(int)/100))
+else:
+    # The model weights (that are considered the best) are loaded into the model.
+    print("Loading model weights...")
+    model.load_weights(checkpoint_path)
 
-# ************************************************************************************************
-
-
-# Visualization of Confusion Matrix
-"""
-cm = metrics.confusion_matrix(valid_labels, predicted_valid_labels)
-# print(cm)
-cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-plt.figure(figsize=(20,20))
-sns.heatmap(cm_normalized, annot=True, fmt=".4f", linewidths=.5, square = True, cmap = 'summer')
-plt.xlabel('Predicted Values', size=20)
-plt.ylabel('Actual Values', size=20)
-
-ticks = np.arange(len(set(valid_labels)))
-
-plt.xticks(ticks+0.5 ,label_encoder.classes_, rotation=90, size=12) #add 0.5 to ticks to position it at center
-plt.yticks(ticks+0.5 ,label_encoder.classes_, rotation=0, size=12)
-# all_sample_title = 'Accuracy Score: {:.4f}'.format(93) # hardcoded this from training logs for now :D
-# plt.title(all_sample_title, size = 30)
-plt.show()
-""" 
-# Confusion matrix viz end
-
-## Lime Explainer
-"""
-import lime
-import lime.lime_tabular
-import time
-
-# we compute statistics on each feature (column). If the feature is numerical, we compute the mean and std, and discretize it into quartiles
-
-start = time.time()
-explainer = lime.lime_tabular.LimeTabularExplainer(X_train, 
-                                                   feature_names=df.columns, 
-                                                   class_names=label_encoder.classes_)
-print("Elapsed time:", time.time() - start)
-
-#for _ in range(5):100 181-200 300 400 500 600 700 800 900
-for i in (186,193):
-    fname="out" + str(i)
+    ## Lime Explainer
+    # we compute statistics on each feature (column). If the feature is numerical, we compute the mean and std, and discretize it into quartiles
     start = time.time()
-    ith = i
-    exp = explainer.explain_instance(X_test[ith], model.predict_proba, num_features=20, top_labels=1, num_samples=10000)
-    exp.save_to_file(fname,show_table=True)
-    print("Iteration Elapsed time:", time.time() - start)
+    print("Building explainer...")
+    explainer = lime.lime_tabular.LimeTabularExplainer(X_train.to_numpy(), feature_names=df.columns, class_names=label_encoder.classes_)
+    print("Elapsed time:", time.time() - start)
 
-#exp.show_in_notebook(show_table=True, show_all=True)
-    
-#for i in exp.available_labels():
+    for i in n_tcga_test_range:
+        ith = 31+i
+        fname="out_" + str(ith)
+        start = time.time()
+        exp = explainer.explain_instance(stem_X.to_numpy()[i], model.predict_proba, num_features=20, top_labels=1, num_samples=10000)
+        exp.save_to_file(fname,show_table=True)
+        print(f"{ith} Iteration Elapsed time:", time.time() - start)
+        
 
-exp.save_to_file("ss.1.html",show_table=True, show_all=True)
-print("Iteration Elapsed time:", time.time() - start)
+    #exp.show_in_notebook(show_table=True, show_all=True)
+        
+    #for i in exp.available_labels():
+
+    exp.save_to_file("ss.1.html",show_table=True, show_all=True)
+    print("All Iteration Elapsed time:", time.time() - start)
 
 
 
 
-
+"""
 # For this multi-class classification problem, we set the top_labels parameter, so that we only explain the top class with the highest level of probability.
 
 # # %%prun
