@@ -5,10 +5,7 @@ import json
 import pandas as pd
 import numpy as np
 import keras
-import tensorflow as tf
-from keras.models import Sequential
-from keras.layers import Dense, Dropout
-import keras.utils
+
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
@@ -23,12 +20,14 @@ import random
 import seaborn as sns; sns.set_theme()
 import matplotlib.pyplot as plt
 
+import pyarrow.feather as feather
 import torch
 from pytorch_tabnet.tab_model import TabNetClassifier
 
 def get_dataset():
     print("loading dataset")
-    df = pd.read_csv("/Users/thapasushil/project/lanl/genomics/explainable-ai-tcga/data/ben/aug/june18_TCGA.NMJ123.log.RDS.csv")
+    # df = pd.read_csv("../../data/ben/aug/june18_TCGA.NMJ123.log.RDS.csv")
+    df = feather.read_feather('../../data/ben/aug/june18_TCGA.NMJ123.log.RDS.csv.feather')
     # backup = df.copy()
     print("dataset loaded.. preprocessing...")
 
@@ -59,8 +58,12 @@ def main():
     df, Y, label_encoder = get_dataset()
     global_exp_dict = {}
     local_exp_dict = {}
+    n_seeds = 20
+    epochs = 30
+    imp_thresh = 0.001
+    # change number of classes
 
-    for random_state in range(2):
+    for random_state in range(n_seeds):
         print(f"selecting random state{random_state} to split")
         X_train, X_test, y_train, y_test = train_test_split(df.to_numpy(), Y.to_numpy(), test_size = 0.25, random_state = random_state, stratify=Y, shuffle=True)
         X_valid, y_valid = X_test.copy(), y_test.copy()  # not enough dataset
@@ -86,11 +89,12 @@ def main():
             X_train=X_train, y_train=y_train,
             eval_set=[(X_train, y_train), (X_valid, y_valid)],
             eval_name=['train', 'valid'],
-            batch_size=256, virtual_batch_size=32,
+            batch_size=128, virtual_batch_size=32,
+            max_epochs = epochs
         ) 
 
         #save models
-        model_name = f"out/model_seed{random_state}"
+        model_name = f"out/models/model_seed{random_state}"
         saved_filepath = model.save_model(model_name)
         print(f"saved model to {saved_filepath}")
 
@@ -114,28 +118,31 @@ def main():
         plt.legend(loc='upper left')
         plt.savefig(f"out/plots/accuracy_seed{random_state}.png")
         print(f"saved acc plot out/plots/accuracy_seed{random_state}.png")
+        plt.clf()
+        plt.cla()
+        plt.close()
 
 
         # global explanations
         imp = model.feature_importances_
         dfc = df.columns
-
-        feats = {dfc[id]: imp[id] for id in range(imp.shape[0]) if imp[id] > 0 }  # get feats with nonzero global attention weights
+        feats = {dfc[id]: imp[id] for id in range(imp.shape[0]) if imp[id] > imp_thresh }  # get feats with nonzero global attention weights for all imp
         sorted_feats = sorted(feats.copy().items(), key=lambda x: x[1], reverse=True) # sort based on values
-        global_exp_dict[random_state] = list(dfc[imp.argsort()[-imp[imp>0].shape[0]:][::-1]])
+        global_exp_dict[random_state] = sorted_feats
 
         name2idx = {v:i for i,v in enumerate(label_encoder.classes_)}
-
 
         all_data = [('train',X_train, y_train),("test",X_test, y_test)]
 
         # Local Explanations 
         local_exp_dict[random_state] = {}
         for d_name, X_t, y_t in all_data:
+            X_t = X_t.astype(np.float32)
             local_exp_dict[random_state][d_name] = {}
             explain_matrix, masks = model.explain(X_t)
 
-            class_dist = Counter([label_encoder.classes_[i] for i in y_t])
+            class_list = label_encoder.classes_
+            class_dist = Counter([class_list[i] for i in y_t])
 
             plt.figure(figsize=(15,15))
             plt.barh(list(class_dist.keys()), class_dist.values())
@@ -144,6 +151,9 @@ def main():
                 plt.text(class_dist[v] + 3, i-0.25, class_dist[v], color='blue')
             plt.savefig(f"out/plots/data_distribution_{d_name}_seed{random_state}.png")
             print(f"saved data dist plot data_distribution_{d_name}_seed{random_state}.png")
+            plt.clf()
+            plt.cla()
+            plt.close()
 
             for class_name in label_encoder.classes_:
                 local_exp_dict[random_state][d_name][class_name] = {}
@@ -152,12 +162,14 @@ def main():
                 explain_local = explain_matrix[flag] # get global explanations for such subset
 
                 local_exp_counter = Counter()
-                for i in range(class_dist[class_name]):
+                for i in range(class_dist[class_name]): # i number of class_name class
                     # local_exp_dict[random_state][d_name][class_name][i] = {}  # optional ith brain sample in train type of local exp
                     imp = explain_local[i]
-                    idx = list(dfc[imp.argsort()[-imp[imp>0].shape[0]:][::-1]]) # idx of descending weighted per features 
+                    # idx = list(dfc[imp.argsort()[-imp[imp>imp_thresh].shape[0]:][::-1]]) # idx of descending weighted per features // argsort ascenting,, take last nonzero values,
+                    #TODO dont ignore scores. 
+                    idx = dfc[imp > imp_thresh]  # much simpler alternative
                     for _idx in idx:
-                        local_exp_counter.update({dfc[_idx]:1})
+                        local_exp_counter.update({_idx:1})
 
                 plt.figure(figsize=(30,30))
                 local_exp_counter = dict(local_exp_counter.most_common())
@@ -168,9 +180,14 @@ def main():
                 plt.title(f"Cumulative Local Explanations: all {d_name}_seed{random_state}_class{class_name} samples")
                 for i, v in enumerate(list(local_exp_counter.keys())):
                     plt.text(local_exp_counter[v] + 3, i-0.25, local_exp_counter[v], color='blue')
-                plt.savefig(f"out/plots/local_exp_{d_name}_seed{random_state}_class{class_name}.png")
-                print(f"saved local exp plot local_exp_{d_name}_seed{random_state}_class{class_name}.png")
+                plt.savefig(f"out/plots/local_exp_{d_name}_seed{random_state}_class_{class_name}.png")
+                print(f"saved local exp plot local_exp_{d_name}_seed{random_state}_class_{class_name}.png")
+                plt.clf()
+                plt.cla()
+                plt.close()
 
+        del model
+        torch.cuda.empty_cache()  # unauthorized gpu access
     # save global explanations
     dump_json_path = 'out/xai/global_exp.json'
     with open(dump_json_path, 'w') as fp:
@@ -181,10 +198,6 @@ def main():
         json.dump(local_exp_dict, fp)
 
 if __name__ == "__main__":
-    import pdb, traceback, sys
-    try:
-        main()
-    except:
-        extype, value, tb = sys.exc_info()
-        traceback.print_exc()
-        pdb.post_mortem(tb)
+    print("starting script..")
+    main()
+    print("script complete.")
